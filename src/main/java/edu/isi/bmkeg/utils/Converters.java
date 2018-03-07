@@ -9,7 +9,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
@@ -18,6 +17,9 @@ import java.io.OutputStream;
 import java.io.StringReader;
 import java.net.URI;
 import java.nio.channels.FileChannel;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -27,14 +29,13 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.Set;
 import java.util.jar.Attributes;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
-import java.util.prefs.BackingStoreException;
+import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.Adler32;
@@ -46,16 +47,14 @@ import java.util.zip.ZipOutputStream;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
-import org.apache.log4j.Logger;
+import static org.apache.commons.text.CharacterPredicates.DIGITS;
+import static org.apache.commons.text.CharacterPredicates.LETTERS;
+import org.apache.commons.text.RandomStringGenerator;
 import org.w3c.dom.Document;
 import org.w3c.dom.bootstrap.DOMImplementationRegistry;
 import org.w3c.dom.ls.DOMImplementationLS;
 import org.w3c.dom.ls.LSSerializer;
 import org.xml.sax.InputSource;
-
-import com.google.common.io.Files;
-
-import edu.isi.bmkeg.utils.springContext.BmkegProperties;
 
 public class Converters {
 
@@ -471,8 +470,15 @@ public class Converters {
 		if (sourceZipFile.getPath().contains(".jar!")
 				|| sourceZipFile.getPath().contains(".zip!")) {
 
-			tempUnzippedDirectory = Files.createTempDir();
-
+			RandomStringGenerator rsg = new RandomStringGenerator.Builder() 
+					.withinRange('0', 'z')
+			        .filteredBy(LETTERS, DIGITS)
+			        .build();
+			String name = rsg.generate(10);
+				    
+			Path tempDirpath = Files.createTempDirectory(Paths.get(""), name);
+			tempUnzippedDirectory = tempDirpath.toFile();
+			
 			String dAddr = tempUnzippedDirectory.getAbsolutePath();
 
 			String wholePath = sourceZipFile.getPath();
@@ -929,103 +935,16 @@ public class Converters {
 		return Converters.checksum(cis);
 	}
 
-	public static File readAppDirectory(String stem) throws Exception {
-		
-		File wd = new File(BmkegProperties.readWorkingDirectory(false));
-		
-		return readAppDirectory(stem, wd);
-	}
-
-	public static String readAppUrl(String stem, File wd) throws Exception {
-		
-		File propFile = new File(wd + "/webapp.properties");
-		Properties properties = new Properties();
-		
-		if( propFile.exists() ) {
-
-			properties.load(new FileInputStream(propFile));			
-
-		} else {
-
-			throw new IOException("Properties file not specified");
-			
-		}
-		
-		String url = (String) properties.get(stem + ".url");
-		
-		if( url.length() > 0 ) {
-			
-			return url;
-			
-		} else {
-		
-			throw new Exception( stem + " URL is not set.\n");
-		
-		}
-		
-	}
-
-	public static void writeAppUrl(String stem, File dir) throws Exception {
-
-		File wd = new File(BmkegProperties.readWorkingDirectory(false));
-		
-		File propFile = new File(wd + "/webapp.properties");
-		Properties properties = new Properties();
-		
-		properties.setProperty(stem + ".url", dir.getPath());
-		
-		properties.store(new FileWriter(propFile), "");
-		
-	}
-	
-	public static File readAppDirectory(String stem, File wd) throws Exception {
-				
-		File propFile = new File(wd + "/webapp.properties");
-		Properties properties = new Properties();
-		
-		if( propFile.exists() ) {
-
-			properties.load(new FileInputStream(propFile));			
-
-		} else {
-
-			throw new IOException("Properties file not specified");
-			
-		}
-		
-		String appBinPath = (String) properties.get(stem + ".bin.path");
-		
-		if( appBinPath!= null && appBinPath.length() > 0 ) {
-			
-			File appBinDir = new File(appBinPath);			
-			if( !appBinDir.exists() ) {
-				throw new Exception( stem + " configuration is incorrectly set. ");
-			}
-			
-			return appBinDir;
-			
-		} else {
-		
-			throw new Exception( stem + " App directory is not set.\n");
-		
-		}
-		
-	}
-
-	public static void writeAppDirectory(String stem, File dir, File wd) throws Exception {
-
-		File propFile = new File(wd + "/webapp.properties");
-		Properties properties = new Properties();
-		
-		properties.setProperty(stem + ".bin.path", dir.getPath());
-		
-		properties.store(new FileWriter(propFile), "");
-		
-	}
-	
 	public static File retrieveFileFromArchive(File f) throws IOException {
 		
-		File tempUnzippedDirectory = Files.createTempDir();
+		RandomStringGenerator rsg = new RandomStringGenerator.Builder() 
+				.withinRange('0', 'z')
+		        .filteredBy(LETTERS, DIGITS)
+		        .build();
+		String name = rsg.generate(10);
+			    
+		Path tempDirpath = Files.createTempDirectory(Paths.get(""), name);
+		File tempUnzippedDirectory = tempDirpath.toFile();
 
 		String dAddr = tempUnzippedDirectory.getAbsolutePath();
 
